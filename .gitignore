@@ -1,0 +1,59 @@
+# Flutter/Dart related
+**/build/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/android/.gradle/
+.android/
+.idea/
+.vscode/
+
+# iOS related
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/App.framework
+ios/Flutter/engine/
+ios/Flutter/Generated.xcconfig
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Pods/
+ios/Runner.xcworkspace/
+xcuserdata/
+
+# Android related
+.android/
+*.iml
+.idea/
+.gradle/
+local.properties
+
+# Web related
+web/.dart_tool/
+web/.packages
+web/.flutter-plugins
+web/.flutter-plugins-dependencies
+web/.dart_tool/
+
+# Windows related
+windows/flutter/ephemeral/
+
+# macOS related
+macos/Flutter/ephemeral/
+
+# Linux related
+linux/flutter/ephemeral/
+
+# Miscellaneous
+*.log
+*.tmp
+*.swp
+*.lock
+*.DS_Store
+*.class
+
+
+lib/firebase_options.dart
+firebase.json
