@@ -1,3 +1,4 @@
+import 'package:expense_management_app/UI/Screens/landingpage.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_management_app/firebase_auth/signup.dart';
 import 'package:expense_management_app/Components/ErrorDisplayer.dart';
@@ -20,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            SizedBox(height: 80.0),
             Text(
               "Welcome back!!",
               style: TextStyle(
@@ -108,14 +110,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   if (email.isNotEmpty && password.isNotEmpty) {
                     try {
-                      await FirebaseAuth.instance.signInWithEmailAndPassword(
-                          email: email, password: password);
+                      UserCredential userCredential = await FirebaseAuth
+                          .instance
+                          .signInWithEmailAndPassword(
+                        email: email,
+                        password: password,
+                      );
+
+                      String uid = userCredential.user?.uid ?? '';
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => LandingPage(uid: uid),
+                        ),
+                      );
                     } catch (exception) {
-                      ErrorDisplayer(errorMessage: "Firebase Auth Error");
+                      ErrorOverlay.show(context, "Authentication Unsuccessful");
                     }
                   } else {
-                    ErrorDisplayer(
-                        errorMessage: "Fill out the required feilds");
+                    ErrorOverlay.show(context, "Fill out all required feilds");
                   }
                 }),
             SizedBox(height: 18.0),

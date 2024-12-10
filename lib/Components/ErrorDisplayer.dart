@@ -1,61 +1,45 @@
 import 'package:flutter/material.dart';
 
-class ErrorDisplayer extends StatefulWidget {
-  final String? errorMessage;
+class ErrorOverlay {
+  static void show(BuildContext context, String errorMessage,
+      {int durationInSeconds = 4}) {
+    final overlay = Overlay.of(context);
+    if (overlay == null) return;
 
-  const ErrorDisplayer({Key? key, this.errorMessage}) : super(key: key);
-
-  @override
-  State<ErrorDisplayer> createState() => _ErrorDispayerState();
-}
-
-class _ErrorDispayerState extends State<ErrorDisplayer> {
-  bool _isVisible = false;
-  String? _currentErrorMessage;
-
-  @override
-  void didUpdateWidget(covariant ErrorDisplayer oldWidget) {
-    super.didUpdateWidget(oldWidget);
-
-    // Check if the errorMessage has changed
-    if (widget.errorMessage != null &&
-        widget.errorMessage != oldWidget.errorMessage) {
-      showError(widget.errorMessage!);
-    }
-  }
-
-  void showError(String errorMessage) {
-    setState(() {
-      _currentErrorMessage = errorMessage;
-      _isVisible = true;
-    });
-
-    // Hide the error after 5 seconds
-    Future.delayed(Duration(seconds: 5), () {
-      if (mounted) {
-        setState(() {
-          _isVisible = false;
-        });
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Display the error message if _isVisible is true
-    return _isVisible
-        ? Container(
-            width: double.infinity,
-            color: Colors.red,
-            padding: EdgeInsets.all(10.0),
+    // Create an entry for the overlay
+    final overlayEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        top: 30.0,
+        left: 20.0,
+        right: 20.0,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: EdgeInsets.all(16.0),
+            decoration: BoxDecoration(
+              color: const Color.fromARGB(255, 223, 95, 113),
+              borderRadius: BorderRadius.circular(16.0),
+            ),
             child: Text(
-              _currentErrorMessage ?? '',
+              errorMessage,
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16.0,
+                fontWeight: FontWeight.bold,
               ),
+              textAlign: TextAlign.center,
             ),
-          )
-        : SizedBox.shrink();
+          ),
+        ),
+      ),
+    );
+
+    // Insert the overlay
+    overlay.insert(overlayEntry);
+
+    // Remove the overlay after the specified duration
+    Future.delayed(Duration(seconds: durationInSeconds), () {
+      overlayEntry.remove();
+    });
   }
 }

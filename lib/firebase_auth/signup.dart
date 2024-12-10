@@ -3,6 +3,8 @@ import 'package:expense_management_app/firebase_auth/login.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:expense_management_app/Components/ErrorDisplayer.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_management_app/UI/Screens/landingpage.dart';
 
 class SignupScreen extends StatefulWidget {
   @override
@@ -62,7 +64,7 @@ class _SignupScreenState extends State<SignupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 30.0),
+            SizedBox(height: 65.0),
             Text(
               "Create an account",
               style: TextStyle(
@@ -173,19 +175,38 @@ class _SignupScreenState extends State<SignupScreen> {
                     password.isNotEmpty &&
                     name.isNotEmpty) {
                   if (password.length < 8) {
-                    ErrorDisplayer(
-                        errorMessage: "Password Must be 8 characters long");
+                    ErrorOverlay.show(
+                        context, "Password must be 8 characters long");
                   } else {
                     try {
-                      await FirebaseAuth.instance
+                      final UserCredential userCredential = await FirebaseAuth
+                          .instance
                           .createUserWithEmailAndPassword(
                               email: email, password: password);
+
+                      String uid = userCredential.user!.uid;
+
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .set({
+                        'name': name,
+                        'createdAt': FieldValue.serverTimestamp(),
+                      });
+
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              LandingPage(uid: uid), // Pass UID to LandingPage
+                        ),
+                      );
                     } catch (exception) {
-                      ErrorDisplayer(errorMessage: "Firebase Auth Error");
+                      ErrorOverlay.show(context, "Authentication Unsuccessful");
                     }
                   }
                 } else {
-                  ErrorDisplayer(errorMessage: "Fill out the required feilds");
+                  ErrorOverlay.show(context, "Fill out the required feilds");
                 }
               },
             ),

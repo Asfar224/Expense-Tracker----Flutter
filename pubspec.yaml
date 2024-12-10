@@ -34,6 +34,7 @@ dependencies:
   firebase_auth: ^5.3.1  # Firebase Auth for login/signup
   provider: ^6.1.2
   google_sign_in: ^6.2.1
+  cloud_firestore: ^5.4.4
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
