@@ -42,7 +42,7 @@ class HeaderSection extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(width: 50),
+                SizedBox(height: 8),
                 Text(
                   "Monthly Cash Flow",
                   style: TextStyle(
