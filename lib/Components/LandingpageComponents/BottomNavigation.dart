@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:expense_management_app/UI/Screens/Homepage.dart';
+import 'package:expense_management_app/UI/Screens/Incomepage.dart';
+import 'package:expense_management_app/UI/Screens/Expenses.dart';
 
 class BottomNavigationPage extends StatefulWidget {
   final String uid;
@@ -15,9 +17,9 @@ class _BottomNavigationPageState extends State<BottomNavigationPage> {
 
   // List of pages for navigation
   final List<Widget> _pages = [
-    HomePage(), // Home Page
-    Center(child: Text('Wallet Page')), // Placeholder for Wallet
-    Center(child: Text('Budget Page')), // Placeholder for Budget
+    HomePage(),
+    Expenses(),
+    AddIncomePage(),
     Center(child: Text('Profile Page')), // Placeholder for Profile
   ];
 
@@ -41,12 +43,12 @@ class _BottomNavigationPageState extends State<BottomNavigationPage> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: 'Wallet',
+            icon: Icon(Icons.attach_money),
+            label: 'Expenses',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.attach_money),
-            label: 'Budget',
+            icon: Icon(Icons.account_balance_wallet),
+            label: 'Add Income',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person),

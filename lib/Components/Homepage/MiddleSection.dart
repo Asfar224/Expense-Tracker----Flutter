@@ -18,7 +18,7 @@ class MiddleSection extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-          SizedBox(height: 10),
+          SizedBox(height: 15),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
