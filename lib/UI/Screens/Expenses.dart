@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:expense_management_app/Components/Expensepage/Expenseform.dart';
 
 class Expenses extends StatelessWidget {
   final List<Map<String, dynamic>> expenses = [
@@ -56,7 +57,7 @@ class Expenses extends StatelessWidget {
           Expanded(
             child: Container(
               decoration: const BoxDecoration(
-                color: Color.fromARGB(255, 197, 149, 149),
+                color: Color.fromARGB(255, 255, 255, 255),
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -108,8 +109,40 @@ class Expenses extends StatelessWidget {
       // Add Expense Button
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Action to add a new expense
-          print("Add new expense");
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext context) {
+              return Dialog(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                ),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      width: MediaQuery.of(context).size.width * 0.9,
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      child: ExpenseForm(),
+                    ),
+                    // Close Icon at the top right corner
+                    Positioned(
+                      right: -5,
+                      top: -3,
+                      child: IconButton(
+                        icon: const Icon(Icons.close,
+                            color: Colors.red, size: 30),
+                        onPressed: () {
+                          Navigator.of(context).pop(); // Close the Dialog
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
         },
         backgroundColor: const Color(0xFF4E1590),
         child: const Icon(Icons.add, size: 32, color: Colors.white),
