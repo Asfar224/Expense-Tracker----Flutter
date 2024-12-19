@@ -1,14 +1,94 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_management_app/Components/Expensepage/Expenseform.dart';
+import 'package:expense_management_app/Components/Expensepage/Expensedetails.dart';
 
-class Expenses extends StatelessWidget {
-  final List<Map<String, dynamic>> expenses = [
-    {'type': 'Food and drinks', 'amount': '₹20,000'},
-    {'type': 'Entertainment', 'amount': '₹8,000'},
-    {'type': 'Shopping', 'amount': '₹15,000'},
-    {'type': 'Utilities', 'amount': '₹5,000'},
-    {'type': 'Transport', 'amount': '₹3,000'},
-  ];
+class Expenses extends StatefulWidget {
+  @override
+  _ExpensesState createState() => _ExpensesState();
+}
+
+class _ExpensesState extends State<Expenses> {
+  List<Map<String, dynamic>> expenses = [];
+  bool isLoading = true;
+  String errorMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    fetchExpenses();
+  }
+
+  Future<void> fetchExpenses() async {
+    try {
+      // Fetch the data from Firebase Firestore
+      QuerySnapshot snapshot =
+          await FirebaseFirestore.instance.collection('expenses').get();
+
+      Map<String, double> categorySums = {};
+
+      // Process the fetched data
+      for (var doc in snapshot.docs) {
+        var data = doc.data() as Map<String, dynamic>?;
+
+        // Ensure data is not null and contains the 'expenses' field
+        if (data != null && data.containsKey('expenses')) {
+          var expensesList = data['expenses'] as List<dynamic>?;
+
+          // If the expenses array exists and is not empty
+          if (expensesList != null && expensesList.isNotEmpty) {
+            for (var expense in expensesList) {
+              // Ensure each expense has the 'type' and 'amount' fields
+              if (expense.containsKey('type') &&
+                  expense.containsKey('amount')) {
+                String type = expense['type'];
+                double amount =
+                    double.tryParse(expense['amount'].toString()) ?? 0.0;
+
+                // Check if the type is one of the valid categories
+                if ([
+                  'Food',
+                  'Transport',
+                  'Rent',
+                  'Utilities',
+                  'Entertainment',
+                  'Healthcare',
+                  'Shopping',
+                  'Other'
+                ].contains(type)) {
+                  categorySums[type] = (categorySums[type] ?? 0.0) + amount;
+                }
+              } else {
+                print('Missing type or amount in expense: ${expense}');
+              }
+            }
+          } else {
+            print('No expenses array found in document: ${doc.id}');
+          }
+        } else {
+          print('Document missing expenses field: ${doc.id}');
+        }
+      }
+
+      // Convert categorySums to a list of expenses for UI
+      setState(() {
+        expenses = categorySums.entries.map((entry) {
+          return {
+            'type': entry.key,
+            'amount': '₹${entry.value.toStringAsFixed(2)}',
+          };
+        }).toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      // Log the error and show a message
+      print('Error fetching expenses: $e');
+      setState(() {
+        errorMessage = 'Failed to load expenses: $e';
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -87,18 +167,36 @@ class Expenses extends StatelessWidget {
                     ),
                   ),
 
-                  // Expense Cards
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: expenses.length,
-                      itemBuilder: (context, index) {
-                        return _buildExpenseCard(
-                          expenses[index]['type'],
-                          expenses[index]['amount'],
-                        );
-                      },
+                  // Error Message or Loading Indicator
+                  if (isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (errorMessage.isNotEmpty)
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          errorMessage,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    // Expense Cards
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: expenses.length,
+                        itemBuilder: (context, index) {
+                          return _buildExpenseCard(
+                            expenses[index]['type'],
+                            expenses[index]['amount'],
+                          );
+                        },
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),
@@ -152,51 +250,62 @@ class Expenses extends StatelessWidget {
 
   // Single Expense Card
   Widget _buildExpenseCard(String expenseType, String amount) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color.fromARGB(255, 209, 208, 208),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: () {
+        // You can handle the card tap here, e.g., navigate to another page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExpenseDetailPage(category: expenseType),
           ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.purple.shade50,
-                child: const Icon(
-                  Icons.category,
-                  color: Color(0xFF4E1590),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                expenseType,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          Text(
-            amount,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: const Color.fromARGB(255, 209, 208, 208),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
-          ),
-        ],
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.purple.shade50,
+                  child: const Icon(
+                    Icons.category,
+                    color: Color(0xFF4E1590),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  expenseType,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            Text(
+              amount,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

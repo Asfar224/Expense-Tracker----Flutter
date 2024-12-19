@@ -13,8 +13,8 @@ class _ExpenseFormState extends State<ExpenseForm> {
   final _formKey = GlobalKey<FormState>();
   String _type = '';
   String _amount = '';
-  String _expenseName = ''; // New field
-  String _description = ''; // New field
+  String _expenseName = '';
+  String _description = '';
 
   // List of basic expense types for the dropdown
   final List<String> _expenseTypes = [
@@ -33,6 +33,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
     return DateTime.now().toString();
   }
 
+  // Function to submit data to Firebase
   // Function to submit data to Firebase
   Future<void> _submitExpense() async {
     if (_formKey.currentState!.validate()) {
@@ -57,20 +58,20 @@ class _ExpenseFormState extends State<ExpenseForm> {
       };
 
       try {
-        final docRef =
-            FirebaseFirestore.instance.collection('expenses').doc(uid);
+        final userDocRef =
+            FirebaseFirestore.instance.collection('users').doc(uid);
 
         // Check if the document exists
-        final docSnapshot = await docRef.get();
+        final userDocSnapshot = await userDocRef.get();
 
-        if (docSnapshot.exists) {
+        if (userDocSnapshot.exists) {
           // Append to existing "expenses" array
-          await docRef.update({
+          await userDocRef.update({
             'expenses': FieldValue.arrayUnion([newExpense]),
           });
         } else {
           // Create document and add "expenses" array
-          await docRef.set({
+          await userDocRef.set({
             'expenses': [newExpense],
           });
         }
@@ -86,78 +87,83 @@ class _ExpenseFormState extends State<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Container(
-      child: Padding(
-        padding: const EdgeInsets.all(14.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              SizedBox(
-                height: 15.0,
+      resizeToAvoidBottomInset: true, // Avoid overflow when the keyboard opens
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(14.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 15.0),
+                  const Text("Add Expenses", style: TextStyle(fontSize: 25.0)),
+                  const SizedBox(height: 20.0),
+                  TextFormField(
+                    decoration:
+                        const InputDecoration(labelText: "Expense Name"),
+                    validator: (value) =>
+                        value!.isEmpty ? "Please enter expense name" : null,
+                    onSaved: (value) => _expenseName = value!,
+                  ),
+                  const SizedBox(height: 10.0),
+                  DropdownButtonFormField<String>(
+                    decoration:
+                        const InputDecoration(labelText: "Expense Type"),
+                    value: _type.isNotEmpty ? _type : null,
+                    items: _expenseTypes.map((type) {
+                      return DropdownMenuItem<String>(
+                        value: type,
+                        child: Text(type),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _type = value!;
+                      });
+                    },
+                    validator: (value) => value == null || value.isEmpty
+                        ? "Please select expense type"
+                        : null,
+                    onSaved: (value) => _type = value!,
+                  ),
+                  const SizedBox(height: 10.0),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: "Amount"),
+                    keyboardType: TextInputType.number,
+                    validator: (value) =>
+                        value!.isEmpty ? "Please enter amount" : null,
+                    onSaved: (value) => _amount = value!,
+                  ),
+                  const SizedBox(height: 10.0),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: "Description"),
+                    validator: (value) =>
+                        value!.isEmpty ? "Please enter description" : null,
+                    onSaved: (value) => _description = value!,
+                  ),
+                  const SizedBox(height: 35),
+                  Center(
+                    child: ElevatedButton(
+                      onPressed: _submitExpense,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4E1590),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 50, vertical: 15),
+                      ),
+                      child: const Text(
+                        "ADD",
+                        style: TextStyle(fontSize: 15, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              Text("Add Expenses", style: const TextStyle(fontSize: 25.0)),
-              SizedBox(
-                height: 20.0,
-              ),
-              TextFormField(
-                decoration: const InputDecoration(labelText: "Expense Name"),
-                validator: (value) =>
-                    value!.isEmpty ? "Please enter expense name" : null,
-                onSaved: (value) => _expenseName = value!,
-              ),
-              SizedBox(height: 10.0),
-              DropdownButtonFormField<String>(
-                decoration: const InputDecoration(labelText: "Expense Type"),
-                value: _type.isNotEmpty ? _type : null,
-                items: _expenseTypes.map((type) {
-                  return DropdownMenuItem<String>(
-                    value: type,
-                    child: Text(type),
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _type = value!;
-                  });
-                },
-                validator: (value) => value == null || value.isEmpty
-                    ? "Please select expense type"
-                    : null,
-                onSaved: (value) => _type = value!,
-              ),
-              SizedBox(height: 10.0),
-              TextFormField(
-                decoration: const InputDecoration(labelText: "Amount"),
-                keyboardType: TextInputType.number,
-                validator: (value) =>
-                    value!.isEmpty ? "Please enter amount" : null,
-                onSaved: (value) => _amount = value!,
-              ),
-              SizedBox(height: 10.0),
-              TextFormField(
-                decoration: const InputDecoration(labelText: "Description"),
-                validator: (value) =>
-                    value!.isEmpty ? "Please enter description" : null,
-                onSaved: (value) => _description = value!,
-              ),
-              const SizedBox(height: 35),
-              ElevatedButton(
-                onPressed: _submitExpense,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4E1590),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                ),
-                child: const Text(
-                  "ADD",
-                  style: TextStyle(fontSize: 15, color: Colors.white),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    ));
+    );
   }
 }

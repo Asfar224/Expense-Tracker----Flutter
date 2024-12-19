@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AddIncomePage extends StatefulWidget {
   @override
@@ -23,12 +25,76 @@ class _AddIncomePageState extends State<AddIncomePage> {
     "Custom",
   ];
 
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   void dispose() {
     customIncomeTypeController.dispose();
     incomeAmountController.dispose();
     descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> addIncomeToFirestore() async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      print("User not logged in!");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text("User is not logged in! Please log in to continue.")),
+      );
+      return;
+    }
+
+    final String uid = user.uid;
+
+    // Prepare the new income object
+    final newIncome = {
+      "type": selectedIncomeType == "Custom"
+          ? customIncomeTypeController.text
+          : selectedIncomeType,
+      "amount": double.tryParse(incomeAmountController.text) ?? 0.0,
+      "description": descriptionController.text,
+      "timestamp": DateTime.now().toIso8601String(),
+    };
+
+    try {
+      final userDocRef = _firestore.collection('users').doc(uid);
+
+      // Check if the document exists
+      final userDocSnapshot = await userDocRef.get();
+
+      if (userDocSnapshot.exists) {
+        // Append to existing "income" array
+        await userDocRef.update({
+          'income': FieldValue.arrayUnion([newIncome]),
+        });
+      } else {
+        // Create document and add "income" array
+        await userDocRef.set({
+          'income': [newIncome],
+        });
+      }
+
+      print("Income added successfully!");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Income added successfully!")),
+      );
+
+      setState(() {
+        customIncomeTypeController.clear();
+        incomeAmountController.clear();
+        descriptionController.clear();
+        selectedIncomeType = null;
+        isCustomIncomeType = false;
+      });
+    } catch (e) {
+      print("Error adding income: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to add income: $e")),
+      );
+    }
   }
 
   @override
@@ -159,12 +225,7 @@ class _AddIncomePageState extends State<AddIncomePage> {
           // New Button
           ElevatedButton(
             onPressed: () {
-              // Add your button's functionality here
-              print("Add Income button pressed");
-              print("Selected Income Type: $selectedIncomeType");
-              print("Custom Income Type: ${customIncomeTypeController.text}");
-              print("Income Amount: ${incomeAmountController.text}");
-              print("Description: ${descriptionController.text}");
+              addIncomeToFirestore();
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Color(0xFF4E1590),
