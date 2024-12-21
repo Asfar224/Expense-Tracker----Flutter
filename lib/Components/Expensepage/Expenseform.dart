@@ -16,7 +16,6 @@ class _ExpenseFormState extends State<ExpenseForm> {
   String _expenseName = '';
   String _description = '';
 
-  // List of basic expense types for the dropdown
   final List<String> _expenseTypes = [
     'Food',
     'Transport',
@@ -33,13 +32,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
     return DateTime.now().toString();
   }
 
-  // Function to submit data to Firebase
-  // Function to submit data to Firebase
   Future<void> _submitExpense() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      // Get the current user
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         print("User not logged in!");
@@ -48,10 +44,9 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
       final String uid = user.uid;
 
-      // Prepare the new expense object
       final newExpense = {
-        'name': _expenseName, // Added field
-        'description': _description, // Added field
+        'name': _expenseName,
+        'description': _description,
         'type': _type,
         'amount': _amount,
         'date': getCurrentDate(),
@@ -61,23 +56,20 @@ class _ExpenseFormState extends State<ExpenseForm> {
         final userDocRef =
             FirebaseFirestore.instance.collection('users').doc(uid);
 
-        // Check if the document exists
         final userDocSnapshot = await userDocRef.get();
 
         if (userDocSnapshot.exists) {
-          // Append to existing "expenses" array
           await userDocRef.update({
             'expenses': FieldValue.arrayUnion([newExpense]),
           });
         } else {
-          // Create document and add "expenses" array
           await userDocRef.set({
             'expenses': [newExpense],
           });
         }
 
         print("Expense added successfully!");
-        Navigator.pop(context); // Close the form after submission
+        Navigator.pop(context);
       } catch (e) {
         print("Error adding expense: $e");
       }
@@ -87,7 +79,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Avoid overflow when the keyboard opens
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(

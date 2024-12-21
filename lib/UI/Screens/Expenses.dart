@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_management_app/Components/Expensepage/Expenseform.dart';
 import 'package:expense_management_app/Components/Expensepage/Expensedetails.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Expenses extends StatefulWidget {
   @override
@@ -9,7 +10,7 @@ class Expenses extends StatefulWidget {
 }
 
 class _ExpensesState extends State<Expenses> {
-  List<Map<String, dynamic>> expenses = [];
+  Map<String, double> categoryTotals = {};
   bool isLoading = true;
   String errorMessage = '';
 
@@ -21,67 +22,65 @@ class _ExpensesState extends State<Expenses> {
 
   Future<void> fetchExpenses() async {
     try {
-      // Fetch the data from Firebase Firestore
-      QuerySnapshot snapshot =
-          await FirebaseFirestore.instance.collection('expenses').get();
-
-      Map<String, double> categorySums = {};
-
-      // Process the fetched data
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>?;
-
-        // Ensure data is not null and contains the 'expenses' field
-        if (data != null && data.containsKey('expenses')) {
-          var expensesList = data['expenses'] as List<dynamic>?;
-
-          // If the expenses array exists and is not empty
-          if (expensesList != null && expensesList.isNotEmpty) {
-            for (var expense in expensesList) {
-              // Ensure each expense has the 'type' and 'amount' fields
-              if (expense.containsKey('type') &&
-                  expense.containsKey('amount')) {
-                String type = expense['type'];
-                double amount =
-                    double.tryParse(expense['amount'].toString()) ?? 0.0;
-
-                // Check if the type is one of the valid categories
-                if ([
-                  'Food',
-                  'Transport',
-                  'Rent',
-                  'Utilities',
-                  'Entertainment',
-                  'Healthcare',
-                  'Shopping',
-                  'Other'
-                ].contains(type)) {
-                  categorySums[type] = (categorySums[type] ?? 0.0) + amount;
-                }
-              } else {
-                print('Missing type or amount in expense: ${expense}');
-              }
-            }
-          } else {
-            print('No expenses array found in document: ${doc.id}');
-          }
-        } else {
-          print('Document missing expenses field: ${doc.id}');
-        }
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        print("User not logged in!");
+        return;
       }
+      String currentUserUid = user.uid;
 
-      // Convert categorySums to a list of expenses for UI
-      setState(() {
-        expenses = categorySums.entries.map((entry) {
-          return {
-            'type': entry.key,
-            'amount': '₹${entry.value.toStringAsFixed(2)}',
-          };
-        }).toList();
-        isLoading = false;
-      });
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserUid)
+          .get();
+      print('User Document ID: ${userDoc.id}, Data: ${userDoc.data()}');
+
+      var data = userDoc.data() as Map<String, dynamic>?;
+
+      if (data != null && data.containsKey('expenses')) {
+        var expensesList = data['expenses'] as List<dynamic>?;
+
+        if (expensesList != null && expensesList.isNotEmpty) {
+          // Initialize a map to sum expenses by category
+          Map<String, double> tempCategoryTotals = {};
+
+          for (var expense in expensesList) {
+            if (expense.containsKey('type') && expense.containsKey('amount')) {
+              String category = expense['type'];
+              double amount =
+                  double.tryParse(expense['amount'].toString()) ?? 0.0;
+
+              // Sum the expenses by category
+              if (tempCategoryTotals.containsKey(category)) {
+                tempCategoryTotals[category] =
+                    tempCategoryTotals[category]! + amount;
+              } else {
+                tempCategoryTotals[category] = amount;
+              }
+            } else {
+              print('Invalid expense data: $expense');
+            }
+          }
+
+          setState(() {
+            categoryTotals = tempCategoryTotals;
+            isLoading = false;
+          });
+        } else {
+          print('No expenses array found in user document.');
+          setState(() {
+            categoryTotals = {};
+            isLoading = false;
+          });
+        }
+      } else {
+        print('User document missing expenses field.');
+        setState(() {
+          categoryTotals = {};
+          isLoading = false;
+        });
+      }
     } catch (e) {
-      // Log the error and show a message
       print('Error fetching expenses: $e');
       setState(() {
         errorMessage = 'Failed to load expenses: $e';
@@ -93,7 +92,7 @@ class _ExpensesState extends State<Expenses> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF4E1590),
+      backgroundColor: const Color(0xFF4E1590),
       body: Column(
         children: [
           // Upper Section with Gradient
@@ -176,7 +175,7 @@ class _ExpensesState extends State<Expenses> {
                         padding: const EdgeInsets.all(16.0),
                         child: Text(
                           errorMessage,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 16,
                             color: Colors.red,
                             fontWeight: FontWeight.bold,
@@ -185,14 +184,17 @@ class _ExpensesState extends State<Expenses> {
                       ),
                     )
                   else
-                    // Expense Cards
+                    // Expense Category Total Cards
                     Expanded(
                       child: ListView.builder(
-                        itemCount: expenses.length,
+                        itemCount: categoryTotals.length,
                         itemBuilder: (context, index) {
+                          String category =
+                              categoryTotals.keys.elementAt(index);
+                          double totalAmount = categoryTotals[category]!;
                           return _buildExpenseCard(
-                            expenses[index]['type'],
-                            expenses[index]['amount'],
+                            category,
+                            '₹${totalAmount.toStringAsFixed(2)}',
                           );
                         },
                       ),
@@ -252,7 +254,6 @@ class _ExpensesState extends State<Expenses> {
   Widget _buildExpenseCard(String expenseType, String amount) {
     return GestureDetector(
       onTap: () {
-        // You can handle the card tap here, e.g., navigate to another page
         Navigator.push(
           context,
           MaterialPageRoute(
