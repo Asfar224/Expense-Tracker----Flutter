@@ -8,6 +8,6 @@ class LandingPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationPage(uid: uid); // Pass uid to BottomNavigationPage
+    return BottomNavigationPage(uid: uid);
   }
 }

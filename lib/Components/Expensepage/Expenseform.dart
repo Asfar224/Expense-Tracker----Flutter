@@ -3,7 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ExpenseForm extends StatefulWidget {
-  const ExpenseForm({Key? key}) : super(key: key);
+  final VoidCallback?
+      onExpenseAdded; // Callback to notify when expense is added
+
+  const ExpenseForm({Key? key, this.onExpenseAdded})
+      : super(key: key); // Constructor with optional callback
 
   @override
   _ExpenseFormState createState() => _ExpenseFormState();
@@ -15,6 +19,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
   String _amount = '';
   String _expenseName = '';
   String _description = '';
+  bool _isLoading = false; // Loading state to show progress
 
   final List<String> _expenseTypes = [
     'Food',
@@ -34,6 +39,10 @@ class _ExpenseFormState extends State<ExpenseForm> {
 
   Future<void> _submitExpense() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true; // Show loading spinner when submitting
+      });
+
       _formKey.currentState!.save();
 
       final user = FirebaseAuth.instance.currentUser;
@@ -69,9 +78,23 @@ class _ExpenseFormState extends State<ExpenseForm> {
         }
 
         print("Expense added successfully!");
-        Navigator.pop(context);
+
+        // Call the callback function passed from the parent widget
+        if (widget.onExpenseAdded != null) {
+          widget.onExpenseAdded!();
+        }
+
+        // Close the dialog (Form) without navigating to the login page
+        Navigator.of(context).pop();
       } catch (e) {
         print("Error adding expense: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding expense: $e')),
+        );
+      } finally {
+        setState(() {
+          _isLoading = false; // Hide loading indicator after operation
+        });
       }
     }
   }
@@ -138,16 +161,21 @@ class _ExpenseFormState extends State<ExpenseForm> {
                   const SizedBox(height: 35),
                   Center(
                     child: ElevatedButton(
-                      onPressed: _submitExpense,
+                      onPressed: _isLoading ? null : _submitExpense,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF4E1590),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 50, vertical: 15),
                       ),
-                      child: const Text(
-                        "ADD",
-                        style: TextStyle(fontSize: 15, color: Colors.white),
-                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : const Text(
+                              "ADD",
+                              style:
+                                  TextStyle(fontSize: 15, color: Colors.white),
+                            ),
                     ),
                   ),
                 ],

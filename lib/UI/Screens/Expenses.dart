@@ -10,17 +10,20 @@ class Expenses extends StatefulWidget {
 }
 
 class _ExpensesState extends State<Expenses> {
-  Map<String, double> categoryTotals = {};
+  Map<String, List<Map<String, dynamic>>> categorizedExpenses = {};
   bool isLoading = true;
   String errorMessage = '';
+  double totalIncome = 0.0;
+  double totalExpenses = 0.0;
+  double budgetUsedPercentage = 0.0;
 
   @override
   void initState() {
     super.initState();
-    fetchExpenses();
+    fetchExpensesAndIncome();
   }
 
-  Future<void> fetchExpenses() async {
+  Future<void> fetchExpensesAndIncome() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
@@ -37,53 +40,73 @@ class _ExpensesState extends State<Expenses> {
 
       var data = userDoc.data() as Map<String, dynamic>?;
 
-      if (data != null && data.containsKey('expenses')) {
+      if (data != null) {
+        // Fetch expenses and income
         var expensesList = data['expenses'] as List<dynamic>?;
+        var incomeList = data['income'] as List<dynamic>?;
 
         if (expensesList != null && expensesList.isNotEmpty) {
-          // Initialize a map to sum expenses by category
-          Map<String, double> tempCategoryTotals = {};
+          Map<String, List<Map<String, dynamic>>> tempCategorizedExpenses = {};
 
           for (var expense in expensesList) {
-            if (expense.containsKey('type') && expense.containsKey('amount')) {
+            if (expense is Map<String, dynamic> &&
+                expense.containsKey('type') &&
+                expense.containsKey('amount')) {
               String category = expense['type'];
-              double amount =
-                  double.tryParse(expense['amount'].toString()) ?? 0.0;
-
-              // Sum the expenses by category
-              if (tempCategoryTotals.containsKey(category)) {
-                tempCategoryTotals[category] =
-                    tempCategoryTotals[category]! + amount;
-              } else {
-                tempCategoryTotals[category] = amount;
-              }
+              tempCategorizedExpenses.putIfAbsent(category, () => []);
+              tempCategorizedExpenses[category]?.add({
+                'name': expense['name'] ?? 'Unnamed',
+                'amount': expense['amount'],
+                'description': expense['description'] ?? 'No description',
+                'date': expense['date'] ?? '',
+              });
+              totalExpenses +=
+                  (double.tryParse(expense['amount'].toString()) ?? 0.0);
             } else {
               print('Invalid expense data: $expense');
             }
           }
 
           setState(() {
-            categoryTotals = tempCategoryTotals;
-            isLoading = false;
+            categorizedExpenses = tempCategorizedExpenses;
           });
         } else {
           print('No expenses array found in user document.');
-          setState(() {
-            categoryTotals = {};
-            isLoading = false;
-          });
         }
-      } else {
-        print('User document missing expenses field.');
+
+        // Calculate total income
+        if (incomeList != null && incomeList.isNotEmpty) {
+          for (var income in incomeList) {
+            if (income is Map<String, dynamic> &&
+                income.containsKey('amount')) {
+              totalIncome +=
+                  (double.tryParse(income['amount'].toString()) ?? 0.0);
+            } else {
+              print('Invalid income data: $income');
+            }
+          }
+        } else {
+          print('No income array found in user document.');
+        }
+
+        // Calculate budget used percentage
+        if (totalIncome > 0) {
+          budgetUsedPercentage = (totalExpenses / totalIncome) * 100;
+        }
+
         setState(() {
-          categoryTotals = {};
+          isLoading = false;
+        });
+      } else {
+        print('User document missing expenses or income field.');
+        setState(() {
           isLoading = false;
         });
       }
     } catch (e) {
-      print('Error fetching expenses: $e');
+      print('Error fetching expenses and income: $e');
       setState(() {
-        errorMessage = 'Failed to load expenses: $e';
+        errorMessage = 'Failed to load expenses and income: $e';
         isLoading = false;
       });
     }
@@ -111,23 +134,27 @@ class _ExpensesState extends State<Expenses> {
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Text(
-                  "80% used",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              children: [
+                isLoading
+                    ? const CircularProgressIndicator()
+                    : Text(
+                        "${budgetUsedPercentage.toStringAsFixed(2)}% used",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                 SizedBox(height: 6),
-                Text(
-                  "from your Total Budget",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
-                ),
+                isLoading
+                    ? const SizedBox.shrink()
+                    : const Text(
+                        "from your Total Budget",
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
               ],
             ),
           ),
@@ -166,9 +193,13 @@ class _ExpensesState extends State<Expenses> {
                     ),
                   ),
 
-                  // Error Message or Loading Indicator
+                  // Loading Indicator positioned below Expense Categories heading
                   if (isLoading)
-                    const Center(child: CircularProgressIndicator())
+                    const Expanded(
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    )
                   else if (errorMessage.isNotEmpty)
                     Center(
                       child: Padding(
@@ -187,14 +218,24 @@ class _ExpensesState extends State<Expenses> {
                     // Expense Category Total Cards
                     Expanded(
                       child: ListView.builder(
-                        itemCount: categoryTotals.length,
+                        itemCount: categorizedExpenses.length,
                         itemBuilder: (context, index) {
                           String category =
-                              categoryTotals.keys.elementAt(index);
-                          double totalAmount = categoryTotals[category]!;
+                              categorizedExpenses.keys.elementAt(index);
+                          List<Map<String, dynamic>> categoryExpenses =
+                              categorizedExpenses[category]!;
+                          double totalAmount = categoryExpenses.fold(
+                            0.0,
+                            (sum, expense) =>
+                                sum +
+                                (double.tryParse(
+                                        expense['amount'].toString()) ??
+                                    0.0),
+                          );
                           return _buildExpenseCard(
                             category,
                             '₹${totalAmount.toStringAsFixed(2)}',
+                            categoryExpenses,
                           );
                         },
                       ),
@@ -224,9 +265,13 @@ class _ExpensesState extends State<Expenses> {
                       padding: const EdgeInsets.all(12),
                       width: MediaQuery.of(context).size.width * 0.9,
                       height: MediaQuery.of(context).size.height * 0.6,
-                      child: ExpenseForm(),
+                      child: ExpenseForm(
+                        onExpenseAdded: () {
+                          fetchExpensesAndIncome();
+                          Navigator.of(context).pop(); // Close the dialog
+                        },
+                      ),
                     ),
-                    // Close Icon at the top right corner
                     Positioned(
                       right: -5,
                       top: -3,
@@ -251,13 +296,17 @@ class _ExpensesState extends State<Expenses> {
   }
 
   // Single Expense Card
-  Widget _buildExpenseCard(String expenseType, String amount) {
+  Widget _buildExpenseCard(String expenseType, String amount,
+      List<Map<String, dynamic>> categoryExpenses) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ExpenseDetailPage(category: expenseType),
+            builder: (context) => ExpenseDetailPage(
+              category: expenseType,
+              expenses: categoryExpenses,
+            ),
           ),
         );
       },

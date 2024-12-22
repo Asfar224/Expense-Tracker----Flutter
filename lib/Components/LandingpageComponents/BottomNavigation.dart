@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:expense_management_app/UI/Screens/Homepage.dart';
 import 'package:expense_management_app/UI/Screens/Incomepage.dart';
 import 'package:expense_management_app/UI/Screens/Expenses.dart';
+import 'package:expense_management_app/UI/Screens/Profile.dart';
 
 class BottomNavigationPage extends StatefulWidget {
   final String uid;
@@ -20,7 +21,7 @@ class _BottomNavigationPageState extends State<BottomNavigationPage> {
     HomePage(),
     Expenses(),
     AddIncomePage(),
-    Center(child: Text('Profile Page')), // Placeholder for Profile
+    ProfilePage() // Placeholder for Profile
   ];
 
   @override
