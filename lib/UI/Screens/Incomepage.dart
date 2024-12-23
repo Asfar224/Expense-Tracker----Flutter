@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:expense_management_app/UI/Screens/Expenses.dart';
 
 class AddIncomePage extends StatefulWidget {
   @override
@@ -283,7 +284,12 @@ class _AddIncomePageState extends State<AddIncomePage> {
               ),
             ),
             onPressed: () {
-              // Navigate to Add Expenses Screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => Expenses(),
+                ),
+              );
             },
             child: const Text(
               "Add",
