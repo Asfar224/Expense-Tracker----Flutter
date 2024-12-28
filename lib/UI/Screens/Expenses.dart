@@ -218,25 +218,43 @@ class _ExpensesState extends State<Expenses> {
                     // Expense Category Total Cards
                     Expanded(
                       child: ListView.builder(
-                        itemCount: categorizedExpenses.length,
+                        itemCount: categorizedExpenses.isEmpty
+                            ? 1
+                            : categorizedExpenses.length,
                         itemBuilder: (context, index) {
-                          String category =
-                              categorizedExpenses.keys.elementAt(index);
-                          List<Map<String, dynamic>> categoryExpenses =
-                              categorizedExpenses[category]!;
-                          double totalAmount = categoryExpenses.fold(
-                            0.0,
-                            (sum, expense) =>
-                                sum +
-                                (double.tryParse(
-                                        expense['amount'].toString()) ??
-                                    0.0),
-                          );
-                          return _buildExpenseCard(
-                            category,
-                            '₹${totalAmount.toStringAsFixed(2)}',
-                            categoryExpenses,
-                          );
+                          if (categorizedExpenses.isEmpty) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  "Add expenses to display",
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            String category =
+                                categorizedExpenses.keys.elementAt(index);
+                            List<Map<String, dynamic>> categoryExpenses =
+                                categorizedExpenses[category]!;
+                            double totalAmount = categoryExpenses.fold(
+                              0.0,
+                              (sum, expense) =>
+                                  sum +
+                                  (double.tryParse(
+                                          expense['amount'].toString()) ??
+                                      0.0),
+                            );
+                            return _buildExpenseCard(
+                              category,
+                              '₹${totalAmount.toStringAsFixed(2)}',
+                              categoryExpenses,
+                            );
+                          }
                         },
                       ),
                     ),
@@ -249,10 +267,22 @@ class _ExpensesState extends State<Expenses> {
 
       // Add Expense Button
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
+          // Check if the user is authenticated before proceeding
+          final user = FirebaseAuth.instance.currentUser;
+          if (user == null) {
+            // If the user is not logged in, show a login message or redirect to the login screen
+            print("User is not logged in!");
+            Navigator.pushReplacementNamed(
+                context, '/login'); // Redirect to login page
+            return;
+          }
+
+          // Show the dialog to add an expense
           showDialog(
             context: context,
-            barrierDismissible: false,
+            barrierDismissible:
+                false, // Prevent dismissing the dialog by tapping outside
             builder: (BuildContext context) {
               return Dialog(
                 shape: RoundedRectangleBorder(
@@ -266,9 +296,20 @@ class _ExpensesState extends State<Expenses> {
                       width: MediaQuery.of(context).size.width * 0.9,
                       height: MediaQuery.of(context).size.height * 0.6,
                       child: ExpenseForm(
-                        onExpenseAdded: () {
-                          fetchExpensesAndIncome();
-                          Navigator.of(context).pop(); // Close the dialog
+                        onExpenseAdded: () async {
+                          // Ensure the user is still logged in before fetching data
+                          final user = FirebaseAuth.instance.currentUser;
+                          if (user != null) {
+                            // Perform the expense addition logic
+                            await fetchExpensesAndIncome(); // Make sure this method is async if needed
+                            Navigator.of(context).pop(); // Close the dialog
+                          } else {
+                            // Handle the case if the user is not logged in
+                            print(
+                                "User is not logged in after expense submission!");
+                            Navigator.pushReplacementNamed(
+                                context, '/login'); // Redirect to login page
+                          }
                         },
                       ),
                     ),
@@ -279,7 +320,8 @@ class _ExpensesState extends State<Expenses> {
                         icon: const Icon(Icons.close,
                             color: Colors.red, size: 30),
                         onPressed: () {
-                          Navigator.of(context).pop(); // Close the Dialog
+                          Navigator.of(context)
+                              .pop(); // Close the dialog without submitting
                         },
                       ),
                     ),

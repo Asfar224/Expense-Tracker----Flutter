@@ -85,7 +85,7 @@ class _ExpenseFormState extends State<ExpenseForm> {
         }
 
         // Close the dialog (Form) without navigating to the login page
-        Navigator.of(context).pop();
+        Navigator.of(context).maybePop();
       } catch (e) {
         print("Error adding expense: $e");
         ScaffoldMessenger.of(context).showSnackBar(

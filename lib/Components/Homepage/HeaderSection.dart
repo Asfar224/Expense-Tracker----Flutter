@@ -52,7 +52,15 @@ class _HeaderSectionState extends State<HeaderSection>
         if (userDoc.exists) {
           setState(() {
             name = userDoc['name'] ?? '';
-            incomeAmount = _calculateIncome(userDoc['income']);
+            // Check if income exists and is a list before processing
+            if (userDoc['income'] != null && userDoc['income'] is List) {
+              incomeAmount = _calculateIncome(userDoc['income']);
+            } else {
+              incomeAmount = 0.0;
+              print("No income array found in user document.");
+            }
+
+            // Handle expenses (already correctly parsed as numbers)
             expensesAmount = _calculateExpenses(userDoc['expenses']);
           });
         }
@@ -62,18 +70,25 @@ class _HeaderSectionState extends State<HeaderSection>
     }
   }
 
-  // Calculate total income (amount is a number)
+  // Calculate total income (amount can be string or number)
   double _calculateIncome(List<dynamic> income) {
     double total = 0.0;
     for (var item in income) {
-      if (item['amount'] != null && item['amount'] is num) {
-        total += item['amount'];
+      if (item['amount'] != null) {
+        double amount = 0.0;
+        // If the amount is a string, try to parse it
+        if (item['amount'] is String) {
+          amount = double.tryParse(item['amount']) ?? 0.0;
+        } else if (item['amount'] is num) {
+          amount = item['amount'].toDouble();
+        }
+        total += amount;
       }
     }
     return total;
   }
 
-  // Calculate total expenses (amount is a string)
+  // Calculate total expenses (amount is a number)
   double _calculateExpenses(List<dynamic> expenses) {
     double total = 0.0;
     for (var item in expenses) {
@@ -88,10 +103,12 @@ class _HeaderSectionState extends State<HeaderSection>
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: MediaQuery.of(context).size.height,
       decoration: BoxDecoration(
         color: Color.fromARGB(255, 78, 21, 144),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Content
           Container(
@@ -126,7 +143,7 @@ class _HeaderSectionState extends State<HeaderSection>
                     fontSize: 16,
                   ),
                 ),
-                SizedBox(height: 40),
+                SizedBox(height: 60),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -148,7 +165,7 @@ class _HeaderSectionState extends State<HeaderSection>
           // Middle Section
           Expanded(
             child: Container(
-              width: double.infinity, // Ensure it takes full width
+              width: double.infinity,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
