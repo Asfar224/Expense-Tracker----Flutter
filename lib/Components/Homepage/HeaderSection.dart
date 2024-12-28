@@ -88,12 +88,10 @@ class _HeaderSectionState extends State<HeaderSection>
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: MediaQuery.of(context).size.height,
       decoration: BoxDecoration(
         color: Color.fromARGB(255, 78, 21, 144),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header Content
           Container(
@@ -128,7 +126,7 @@ class _HeaderSectionState extends State<HeaderSection>
                     fontSize: 16,
                   ),
                 ),
-                SizedBox(height: 60),
+                SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -150,6 +148,7 @@ class _HeaderSectionState extends State<HeaderSection>
           // Middle Section
           Expanded(
             child: Container(
+              width: double.infinity, // Ensure it takes full width
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(25)),

@@ -33,41 +33,63 @@ class _MiddleSectionState extends State<MiddleSection> {
 
   Future<void> _fetchExpenses() async {
     try {
-      // Get the current user
       final User? user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception("User not logged in");
       }
 
-      // Fetch expenses from Firestore
-      QuerySnapshot snapshot = await FirebaseFirestore.instance
-          .collection('expenses')
+      print("Fetching data for User ID: ${user.uid}");
+
+      // Fetch user's document from the "users" collection
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
           .doc(user.uid)
-          .collection('userExpenses')
           .get();
+
+      final data = userDoc.data() as Map<String, dynamic>?;
+
+      if (data == null || !data.containsKey('expenses')) {
+        print("No expenses found for user.");
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      List<dynamic> expenses = data['expenses'] ?? [];
+      print("Expenses Array: $expenses");
 
       Map<String, double> categoryExpenses = {};
       double totalExpenses = 0.0;
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        final String category = data['type'] ?? 'Other';
-        final double amount = (data['amount'] ?? 0).toDouble();
+      for (var expense in expenses) {
+        final String category = expense['type']?.toString() ?? 'Other';
+        final double amount =
+            double.tryParse(expense['amount']?.toString() ?? '0') ?? 0.0;
 
         categoryExpenses[category] = (categoryExpenses[category] ?? 0) + amount;
         totalExpenses += amount;
       }
 
-      setState(() {
-        _categoryExpenses = categoryExpenses;
-        _totalExpenses = totalExpenses;
-        _isLoading = false;
-      });
+      print("Fetched Category Expenses: $categoryExpenses");
+      print("Total Expenses: $totalExpenses");
+
+      if (mounted) {
+        setState(() {
+          _categoryExpenses = categoryExpenses;
+          _totalExpenses = totalExpenses;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       print('Error fetching expenses: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -76,7 +98,7 @@ class _MiddleSectionState extends State<MiddleSection> {
     return _isLoading
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -89,26 +111,31 @@ class _MiddleSectionState extends State<MiddleSection> {
                   ),
                 ),
                 const SizedBox(height: 15),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: _categories
-                        .where((category) =>
-                            _categoryExpenses.containsKey(category))
-                        .map((category) {
-                      final double amount = _categoryExpenses[category]!;
-                      final String percentage = _totalExpenses == 0
-                          ? "0%"
-                          : "${((amount / _totalExpenses) * 100).toStringAsFixed(1)}%";
+                _categoryExpenses.isEmpty
+                    ? const Text(
+                        "No expenses found. Add expenses to display the summary.",
+                        style: TextStyle(color: Colors.grey, fontSize: 16),
+                      )
+                    : SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: _categories
+                              .where((category) =>
+                                  _categoryExpenses.containsKey(category))
+                              .map((category) {
+                            final double amount = _categoryExpenses[category]!;
+                            final String percentage = _totalExpenses == 0
+                                ? "0%"
+                                : "${((amount / _totalExpenses) * 100).toStringAsFixed(1)}%";
 
-                      return _SpendCard(
-                        title: category,
-                        percentage: percentage,
-                        icon: _getIconForCategory(category),
-                      );
-                    }).toList(),
-                  ),
-                ),
+                            return _SpendCard(
+                              title: category,
+                              percentage: percentage,
+                              icon: _getIconForCategory(category),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                 const SizedBox(height: 20),
               ],
             ),
@@ -137,7 +164,6 @@ class _MiddleSectionState extends State<MiddleSection> {
   }
 }
 
-// Spend Card Widget
 class _SpendCard extends StatelessWidget {
   final String title;
   final String percentage;
@@ -153,8 +179,8 @@ class _SpendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 120,
-      margin: const EdgeInsets.only(right: 16),
+      width: 150, // Set fixed width
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
